@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <project name="MagicSpells" default="build" basedir=".">
 	
-	<property name="core.version" value="3.4.2"/>
+	<property name="core.version" value="3.5"/>
 	<property name="core.src.dir" location="src"/>
 	<property name="core.build.dir" location="bin"/>
 	
@@ -59,7 +59,10 @@
 		<javac srcdir="${core.src.dir}" destdir="${core.build.dir}" debug="true" source="1.6" target="1.6">
 			<classpath>
 				<fileset dir="${lib.dir}">
-					<include name="spigot*.jar"/>
+					<include name="spigot-1.9.jar"/>
+				</fileset>
+				<fileset dir="${lib.dir}">
+					<include name="spigot-1.8*.jar"/>
 				</fileset>
 				<fileset dir="${lib.dir}">
 					<include name="bukkit*.jar"/>

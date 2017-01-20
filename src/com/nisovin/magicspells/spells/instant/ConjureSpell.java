@@ -58,12 +58,14 @@ public class ConjureSpell extends InstantSpell implements TargetedEntitySpell, T
 	private double expiration;
 	private int requiredSlot;
 	private int preferredSlot;
+	private boolean offhand;
 	List<String> itemList;
 	private ItemStack[] itemTypes;
 	private int[] itemMinQuantities;
 	private int[] itemMaxQuantities;
 	private double[] itemChances;
 	private float randomVelocity;
+	private int delay;
 	
 	public ConjureSpell(MagicConfig config, String spellName) {
 		super(config, spellName);
@@ -82,8 +84,10 @@ public class ConjureSpell extends InstantSpell implements TargetedEntitySpell, T
 		expiration = getConfigDouble("expiration", 0L);
 		requiredSlot = getConfigInt("required-slot", -1);
 		preferredSlot = getConfigInt("preferred-slot", -1);
+		offhand = getConfigBoolean("offhand", false);
 		itemList = getConfigStringList("items", null);
 		randomVelocity = getConfigFloat("random-velocity", 0);
+		delay = getConfigInt("delay", -1);
 	}
 	
 	@Override
@@ -148,10 +152,18 @@ public class ConjureSpell extends InstantSpell implements TargetedEntitySpell, T
 	}
 
 	@Override
-	public PostCastAction castSpell(Player player, SpellCastState state, float power, String[] args) {
+	public PostCastAction castSpell(final Player player, SpellCastState state, final float power, String[] args) {
 		if (itemTypes == null) return PostCastAction.ALREADY_HANDLED;
 		if (state == SpellCastState.NORMAL) {
-			conjureItems(player, power);
+			if (delay >= 0) {
+				MagicSpells.scheduleDelayedTask(new Runnable() {
+					public void run() {
+						conjureItems(player, power);
+					}
+				}, delay);
+			} else {
+				conjureItems(player, power);
+			}
 		}
 		return PostCastAction.HANDLE_NORMALLY;
 		
@@ -193,7 +205,9 @@ public class ConjureSpell extends InstantSpell implements TargetedEntitySpell, T
 					added = Util.addToInventory(player.getEnderChest(), item, stackExisting, ignoreMaxStackSize);
 				}
 				if (!added && addToInventory) {
-					if (requiredSlot >= 0) {
+					if (offhand) {
+						MagicSpells.getVolatileCodeHandler().setOffhand(player, item);
+					} else if (requiredSlot >= 0) {
 						ItemStack old = inv.getItem(requiredSlot);
 						if (old != null && old.isSimilar(item)) {
 							item.setAmount(item.getAmount() + old.getAmount());

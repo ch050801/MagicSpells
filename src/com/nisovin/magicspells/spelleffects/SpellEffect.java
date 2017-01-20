@@ -1,13 +1,16 @@
 package com.nisovin.magicspells.spelleffects;
 
 import java.util.HashMap;
+import java.util.List;
 
 import org.bukkit.Location;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.entity.Entity;
+import org.bukkit.entity.Player;
 import org.bukkit.util.Vector;
 
 import com.nisovin.magicspells.MagicSpells;
+import com.nisovin.magicspells.castmodifiers.ModifierSet;
 
 /**
  * 
@@ -37,6 +40,8 @@ public abstract class SpellEffect {
 	int ticksPerRevolution;
 	float orbitYOffset = 0;
 	
+	ModifierSet modifiers = null;
+	
 	int taskId = -1;
 	
 	public abstract void loadFromString(String string);
@@ -58,6 +63,11 @@ public abstract class SpellEffect {
 		distancePerTick = 6.28F / (ticksPerSecond * secondsPerRevolution);
 		ticksPerRevolution = Math.round(ticksPerSecond * secondsPerRevolution);
 		orbitYOffset = (float)config.getDouble("orbit-y-offset", orbitYOffset);
+		
+		List<String> list = config.getStringList("modifiers");
+		if (list != null) {
+			modifiers = new ModifierSet(list);
+		}
 		
 		loadFromConfig(config);
 	}
@@ -82,7 +92,7 @@ public abstract class SpellEffect {
 	}
 	
 	protected void playEffectEntity(Entity entity) {
-		playEffectLocationReal(entity.getLocation());
+		playEffectLocationReal(entity == null ? null : entity.getLocation());
 	}
 	
 	/**
@@ -103,7 +113,9 @@ public abstract class SpellEffect {
 	}
 	
 	private void playEffectLocationReal(Location location) {
-		if (heightOffset != 0 || forwardOffset != 0) {
+		if (location == null) {
+			playEffectLocation(null);
+		} else if (heightOffset != 0 || forwardOffset != 0) {
 			Location loc = location.clone();
 			if (heightOffset != 0) {
 				loc.setY(loc.getY() + heightOffset);
@@ -127,7 +139,19 @@ public abstract class SpellEffect {
 	 * @param location2 the ending location
 	 * @param param the parameter specified in the spell config (can be ignored)
 	 */
-	public void playEffect(Location location1, Location location2) {
+	public final void playEffect(final Location location1, final Location location2) {
+		if (delay <= 0) {
+			playEffectLine(location1, location2);
+		} else {
+			MagicSpells.scheduleDelayedTask(new Runnable() {
+				public void run() {
+					playEffectLine(location1, location2);
+				}
+			}, delay);
+		}
+	}
+	
+	protected void playEffectLine(Location location1, Location location2) {
 		int c = (int)Math.ceil(location1.distance(location2) / distanceBetween) - 1;
 		if (c <= 0) return;
 		Vector v = location2.toVector().subtract(location1.toVector()).normalize().multiply(distanceBetween);
@@ -260,10 +284,12 @@ public abstract class SpellEffect {
 		effects.put("fireworks", FireworksEffect.class);
 		effects.put("greensparkle", GreenSparkleEffect.class);
 		effects.put("hearts", HeartsEffect.class);
+		effects.put("itemcooldown", ItemCooldownEffect.class);
 		effects.put("itemspray", ItemSprayEffect.class);
 		effects.put("lightning", LightningEffect.class);
 		effects.put("nova", NovaEffect.class);
 		effects.put("particles", ParticlesEffect.class);
+		effects.put("particlecloud", ParticleCloudEffect.class);
 		effects.put("particleline", ParticleLineEffect.class);
 		effects.put("potion", PotionEffect.class);
 		effects.put("smoke", SmokeEffect.class);
